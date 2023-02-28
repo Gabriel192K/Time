@@ -16,7 +16,8 @@ class __Time__
 {
     public:
         __Time__(volatile uint8_t* tccra, volatile uint8_t* tccrb,\
-                 volatile uint8_t* timsk, volatile uint8_t* ocra);
+                 volatile uint8_t* timsk, volatile uint8_t* ocra,\
+                 volatile uint8_t* tcnt);
         ~__Time__();
         void   begin      (void);
         void   delayMillis(time_t time);
@@ -32,11 +33,13 @@ class __Time__
         volatile uint8_t* tccrb;
         volatile uint8_t* timsk;
         volatile uint8_t* ocra;
+        volatile uint8_t* tcnt;
 };
 
 #if defined(__AVR_ATmega328P__)
-#define USE_TIMER0
 extern __Time__ Time;
+#else
+#error "No Time implementation"
 #endif
 
 #endif

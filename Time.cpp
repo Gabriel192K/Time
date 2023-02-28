@@ -1,18 +1,18 @@
 #include "Time.h"
 
-#if defined(USE_TIMER0)
-
 /*********************************************
 Function: __Time__()
 Purpose:  Constructor to __Time__ class
-Input:    Timer register
+Input:    Timer registers
 Return:   None
 *********************************************/
 __Time__::__Time__(volatile uint8_t* tccra, volatile uint8_t* tccrb,\
-                   volatile uint8_t* timsk, volatile uint8_t* ocra)
+                   volatile uint8_t* timsk, volatile uint8_t* ocra,\
+                   volatile uint8_t* tcnt)
 {
     this->tccra = tccra; this->tccrb = tccrb;
     this->timsk = timsk; this->ocra = ocra;
+    this->tcnt = tcnt;
 }
 
 /*********************************************
@@ -39,10 +39,13 @@ void __Time__::begin(void)
      ATOMIC_BLOCK(ATOMIC_FORCEON)
     {
         this->isOn = 1;                               /* Set a flag that timer is on */
+        #if defined(__AVR_ATmega328P__)
         *this->tccra |= (1 << WGM01);                 /* Wave Generation Mode is set to Clear Timer Output Compare (CTC) */
         *this->tccrb |= (1 << CS01);                  /* Select clock (prescaler to 8) */
         *this->timsk |= (1 << OCIE0A);                /* Enable Output Compare Match Interrupt */
+        *this->tcnt = 0;                              /* Reset timer counter */
         *this->ocra = ROUND((F_CPU / 80000.0) - 1.0); /* Calculate Value To Overflow Every 100 uS */
+        #endif
     }
 }
 
@@ -93,17 +96,18 @@ Return:   None
 *********************************************/
 void __Time__::end(void)
 {
-    #if defined (__AVR_ATmega328P__)
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
         {
             this->counter = 0; /* Clear counter */
             this->isOn = 0;    /* Clear a flag that timer is on */
-            *this->tccra = 0;  /* Wave Generation Mode is set to Clear Timer Output Compare (CTC) */
-            *this->tccrb = 0;  /* Select clock (prescaler to 8) */
-            *this->timsk = 0;  /* Enable Output Compare Match Interrupt */
-            *this->ocra = 0;   /* Calculate Value To Overflow Every 100 uS */
+            #if defined(__AVR_ATmega328P__)
+            *this->tccra = 0; /* Wave Generation Mode is set to Clear Timer Output Compare (CTC) */
+            *this->tccrb = 0; /* Select clock (prescaler to 8) */
+            *this->timsk = 0; /* Enable Output Compare Match Interrupt */
+            *this->ocra = 0;  /* Calculate Value To Overflow Every 100 uS */
+            *this->tcnt = 0;  /* Reset timer counter */
+            #endif
         }
-    #endif
 }
 
 inline void __Time__::countIRQ(void)
@@ -111,10 +115,8 @@ inline void __Time__::countIRQ(void)
     this->counter += MICROS_RESOLUTION;
 }
 
-#endif
-
-#if defined(USE_TIMER0)
-__Time__ Time = __Time__(&TCCR0A, &TCCR0B, &TIMSK0, &OCR0A);
+#if defined(__AVR_ATmega328P__)
+__Time__ Time = __Time__(&TCCR0A, &TCCR0B, &TIMSK0, &OCR0A, &TCNT0);
 #endif
 
 /*********************************************
@@ -123,7 +125,7 @@ Purpose:  Interrupt Service Routine for incrementing variable
 Input:    Vector
 Return:   None
 *********************************************/
-#if defined(USE_TIMER0)
+#if defined(__AVR_ATmega328P__)
 ISR(TIMER0_COMPA_vect)
 #endif
 {
