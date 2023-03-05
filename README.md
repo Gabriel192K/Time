@@ -1,6 +1,8 @@
 # Time
 Time implementation for AVR platform
 
-Using timers for timekeeping
+## Key features
+- timer driven
 
-Tested on ATmega328P
+## Tested on
+- ATmega328P
