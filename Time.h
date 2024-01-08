@@ -9,7 +9,9 @@
 #include <util/atomic.h>   /* Atomic Operaions */
 
 /* Macros */
-#define TIME_INCREMENT_VALUE (uint16_t)(128) /* In microseconds */
+#define TIMER_RANGE          (uint16_t)256 /* How many different values */
+#define TIMER_PRESCALER      (uint8_t)8
+#define TIME_INCREMENT_VALUE (uint32_t)((TIMER_PRESCALER * TIMER_RANGE) / (F_CPU / 1e6)) /* In microseconds */
 #define DELAY_US_CONSTANT    (F_CPU / 4e6)
 
 class __Time__
