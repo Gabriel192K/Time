@@ -26,14 +26,14 @@ __Time__::~__Time__()
 Function: begin()
 Purpose:  Begin time implementation
 Input:    None
-Return:   None
+Return:   Status of begin
 *********************************************/
-void __Time__::begin(void)
+const uint8_t __Time__::begin(void)
 {
     /* If time implementation is already started */
-    if (this->beginFunctionCalled)
-        return;
-    this->beginFunctionCalled = 1;
+    if (this->beginCalled)
+        return (0);
+    this->beginCalled = 1;
     
     ATOMIC_BLOCK(ATOMIC_FORCEON)
     {
@@ -45,9 +45,11 @@ void __Time__::begin(void)
         TCCR0B = TCCR0B | (1 << CS01);
         /* Enable Timer Overflow Interrupt */
         TIMSK0 = TIMSK0 | (1 << TOIE0);
+    #else
+        #error "MCU DOES NOT SUPPORT TIME IMPLEMENTATION"
     #endif
     }
-    
+    return (1);
 }
 
 void __Time__::reset(void)
@@ -89,7 +91,7 @@ Purpose:  Get value of seconds passed since Timer started counting
 Input:    None
 Return:   Value of seconds
 *********************************************/
-uint32_t __Time__::seconds(void)
+const uint32_t __Time__::seconds(void)
 {
     return (this->milliseconds() / 1000);
 }
@@ -100,12 +102,18 @@ Purpose:  Get value of milliseconds passed since Timer started counting
 Input:    None
 Return:   Value of milliseconds
 *********************************************/
-uint32_t __Time__::milliseconds(void)
+const uint32_t __Time__::milliseconds(void)
 {
     return (this->microseconds() / 1000);
 }
 
-uint32_t __Time__::microseconds(void)
+/*********************************************
+Function: microseconds()
+Purpose:  Get value of microseconds passed since Timer started counting
+Input:    None
+Return:   Value of microseconds
+*********************************************/
+const uint32_t __Time__::microseconds(void)
 {
     uint32_t time;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
@@ -121,11 +129,11 @@ Purpose:  End time implementation
 Input:    None
 Return:   None
 *********************************************/
-void __Time__::end(void)
+const uint8_t __Time__::end(void)
 {
-    if (!this->beginFunctionCalled)
-        return;
-    this->beginFunctionCalled = 0;
+    if (!this->beginCalled)
+        return (0);
+    this->beginCalled = 0;
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
@@ -134,10 +142,13 @@ void __Time__::end(void)
             defined(__AVR_ATmega2560__)
         /* Reset Timer Overflow Interrupt */
         TIMSK0 = TIMSK0 & ~(1 << TOIE0);
+        #else
+            #error "MCU DOES NOT SUPPORT TIME IMPLEMENTATION"
         #endif
         /* Clear counter */
         this->counter = 0; 
     }
+	return (1);
 }
 
 void __Time__::irq(void)
@@ -153,7 +164,11 @@ Purpose:  Handling interrupts of Timer COMPA
 Input:    Interrupt vector
 Return:   None
 ************************/
+#if defined(__AVR_ATmega328P__) || \
+    defined(__AVR_ATmega328PB__) || \
+    defined(__AVR_ATmega2560__)
 ISR(TIMER0_OVF_vect)
+#endif
 {
     Time.irq();
 }
