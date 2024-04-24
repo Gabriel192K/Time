@@ -21,22 +21,13 @@ class __Time__
         ~__Time__();
         const uint8_t  begin       (void);
         void           reset       (void);
-<<<<<<< HEAD
         void           delay       (const uint32_t s);
         void           delayMillis (const uint32_t ms);
-=======
-        void           delay       (uint32_t s);
-        void           delayMillis (uint32_t ms);
->>>>>>> 40bdc76a700ce66cb33d75bd4dede2480bf0561e
         const uint32_t seconds     (void);
         const uint32_t milliseconds(void);
         const uint32_t microseconds(void);
         const uint8_t end          (void);
-<<<<<<< HEAD
         void          isr          (void);
-=======
-        void          irq          (void);
->>>>>>> 40bdc76a700ce66cb33d75bd4dede2480bf0561e
     private:
         uint8_t beginCalled;
         volatile uint32_t counter;
