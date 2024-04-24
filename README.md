@@ -1,4 +1,4 @@
-# Terminal
+# Time
 - Time library for timekeeping
 
 ## Key features

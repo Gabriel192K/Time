@@ -1,159 +1,144 @@
 #include "Time.h"
 
-/*********************************************
-Function: __Time__()
-Purpose:  Constructor to __Time__ class
-Input:    None
-Return:   None
-*********************************************/
+/*!
+ * @brief  __Time__ constructor
+ */
 __Time__::__Time__()
 {
     /* Empty */
 }
 
-/*********************************************
-Function: __Time__()
-Purpose:  Destructor to __Time__ class
-Input:    None
-Return:   None
-*********************************************/
+/*!
+ * @brief  __Time__ Destructor
+ */
 __Time__::~__Time__()
 {
     /* Empty */
 }
 
-/*********************************************
-Function: begin()
-Purpose:  Begin time implementation
-Input:    None
-Return:   None
-*********************************************/
-void __Time__::begin(void)
+/*!
+ * @brief  Begins the time implementation
+ * @return Returns 0 if time implementation already began, otherwise returns 1
+ */
+const uint8_t __Time__::begin(void)
 {
-    /* If time implementation is already started */
-    if (this->beginFunctionCalled)
-        return;
-    this->beginFunctionCalled = 1;
+    if (this->beginCalled)
+        return (0);
+    this->beginCalled = 1;
     
     ATOMIC_BLOCK(ATOMIC_FORCEON)
     {
     #if defined(__AVR_ATmega328P__) || \
         defined(__AVR_ATmega328PB__) || \
         defined(__AVR_ATmega2560__)
-        /* Select clock prescaler to 8 */
-        TCCR0B = TCCR0B & ~((1 << CS02) | (1 << CS00));
+        TCCR0B = TCCR0B & ~((1 << CS02) | (1 << CS00)); // Select clock prescaler to 8
         TCCR0B = TCCR0B | (1 << CS01);
-        /* Enable Timer Overflow Interrupt */
-        TIMSK0 = TIMSK0 | (1 << TOIE0);
+        TIMSK0 = TIMSK0 | (1 << TOIE0);                 // Enable Timer Overflow Interrupt
     #endif
     }
-    
+    return (1);
 }
 
+/*!
+ * @brief  Resets the time counter
+ */
 void __Time__::reset(void)
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-    {
-        /* Reset variable */
         this->counter = 0;
-    }
 }
 
-/*********************************************
-Function: delay()
-Purpose:  Delay a specified amount of time in seconds
-Input:    Amount of seconds to be delayed
-Return:   None
-*********************************************/
-void __Time__::delay(uint32_t s)
+/*!
+ * @brief  Delays a certain amount of seconds
+ * @param  s
+ *         Amount of seconds to delay the <MCU>
+ */
+void __Time__::delay(const uint32_t s)
 {
-    uint32_t timestamp = this->seconds();
+    const uint32_t timestamp = this->seconds();
     while ((this->seconds() - timestamp) < s);
 }
 
-/*********************************************
-Function: delayMillis()
-Purpose:  Delay a specified amount of time in milliseconds
-Input:    Amount of milliseconds to be delayed
-Return:   None
-*********************************************/
-void __Time__::delayMillis(uint32_t ms)
+/*!
+ * @brief  Delays a certain amount of milliseconds
+ * @param  ms
+ *         Amount of milliseconds to delay the <MCU>
+ */
+void __Time__::delayMillis(const uint32_t ms)
 {
-    uint32_t timestamp = this->milliseconds();
+    const uint32_t timestamp = this->milliseconds();
     while ((this->milliseconds() - timestamp) < ms);
 }
 
-/*********************************************
-Function: seconds()
-Purpose:  Get value of seconds passed since Timer started counting
-Input:    None
-Return:   Value of seconds
-*********************************************/
-uint32_t __Time__::seconds(void)
+/*!
+ * @brief  Getting the amount of seconds elapsed since time implementation started
+ * @return Returns the amount of seconds elapsed since time implementation started
+ */
+const uint32_t __Time__::seconds(void)
 {
     return (this->milliseconds() / 1000);
 }
 
-/*********************************************
-Function: milliseconds()
-Purpose:  Get value of milliseconds passed since Timer started counting
-Input:    None
-Return:   Value of milliseconds
-*********************************************/
-uint32_t __Time__::milliseconds(void)
+/*!
+ * @brief  Getting the amount of milliseconds elapsed since time implementation started
+ * @return Returns the amount of milliseconds elapsed since time implementation started
+ */
+const uint32_t __Time__::milliseconds(void)
 {
     return (this->microseconds() / 1000);
 }
 
-uint32_t __Time__::microseconds(void)
+/*!
+ * @brief  Getting the amount of microseconds elapsed since time implementation started
+ * @return Returns the amount of microseconds elapsed since time implementation started
+ */
+const uint32_t __Time__::microseconds(void)
 {
     uint32_t time;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-    {
         time = this->counter;
-    }
     return (time);
 }
-
-/*********************************************
-Function: end()
-Purpose:  End time implementation
-Input:    None
-Return:   None
-*********************************************/
-void __Time__::end(void)
+/*!
+ * @brief  Ends the time implementation
+ * @return Returns 0 if time implementation already ended, otherwise returns 1
+ */
+const uint8_t __Time__::end(void)
 {
-    if (!this->beginFunctionCalled)
-        return;
-    this->beginFunctionCalled = 0;
+    if (!this->beginCalled)
+        return (0);
+    this->beginCalled = 0;
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
-        #if defined(__AVR_ATmega328P__) || \
-            defined(__AVR_ATmega328PB__) || \
-            defined(__AVR_ATmega2560__)
-        /* Reset Timer Overflow Interrupt */
-        TIMSK0 = TIMSK0 & ~(1 << TOIE0);
-        #endif
-        /* Clear counter */
-        this->counter = 0; 
+    #if defined(__AVR_ATmega328P__) || \
+        defined(__AVR_ATmega328PB__) || \
+        defined(__AVR_ATmega2560__)
+        TCCR0B = TCCR0B & ~((1 << CS02) | (1 << CS01) | (1 << CS00)); // Clear clock prescaler to 0
+        TIMSK0 = TIMSK0 & ~(1 << TOIE0);                              // Disable Timer Overflow Interrupt
+    #else
+        #error "MCU DOES NOT SUPPORT TIME IMPLEMENTATION"
+    #endif
     }
+    this->reset();
+	return (1);
 }
 
-void __Time__::irq(void)
+/*!
+ * @brief  The custom interrupt service routine implementation
+ */
+void __Time__::isr(void)
 {
     this->counter = (this->counter + TIME_INCREMENT_VALUE);
 }
 
 __Time__ Time = __Time__();
 
-/************************
-Function: Interrupt Service Routine
-Purpose:  Handling interrupts of Timer COMPA
-Input:    Interrupt vector
-Return:   None
-************************/
+#if defined(__AVR_ATmega328P__) || \
+    defined(__AVR_ATmega328PB__) || \
+    defined(__AVR_ATmega2560__)
 ISR(TIMER0_OVF_vect)
+#endif
 {
-    Time.irq();
+    Time.isr();
 }
